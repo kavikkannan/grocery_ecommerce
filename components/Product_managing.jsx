@@ -1,99 +1,190 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import AddProducts from "./addproduct";
+import AssignDeliveryPartner from "./assigndeliverpartner";
+import Analytics from "./analytics";
+import CancleOrder from "./cancleorder";
 
 const ProductManagement = () => {
-  // Example data for products (You would fetch this from a database in a real app)
-  const categories = [
-    {
-      name: "Electronics",
-      products: [
-        { id: 1, name: "Smartphone", price: "$299" },
-        { id: 2, name: "Laptop", price: "$899" },
-      ],
-    },
-    {
-      name: "Furniture",
-      products: [
-        { id: 3, name: "Sofa", price: "$499" },
-        { id: 4, name: "Dining Table", price: "$399" },
-      ],
-    },
-  ];
+  const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [selectedOption, setSelectedOption] = useState("addProducts");
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    category: "",
+    price: "",
+    stock: "",
+    description: "",
+  });
 
-  const [products, setProducts] = useState(categories);
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-  // Handler for adding a product
-  const addProduct = (categoryIndex) => {
-    const newProduct = {
-      id: Date.now(),
-      name: `New Product ${Date.now()}`,
-      price: "$0",
-    };
-    const updatedCategories = [...products];
-    updatedCategories[categoryIndex].products.push(newProduct);
-    setProducts(updatedCategories);
-  };
-
-  // Handler for editing a product
-  const editProduct = (categoryIndex, productIndex) => {
-    const updatedCategories = [...products];
-    const product = updatedCategories[categoryIndex].products[productIndex];
-    const newName = prompt("Edit product name:", product.name);
-    const newPrice = prompt("Edit product price:", product.price);
-
-    if (newName && newPrice) {
-      product.name = newName;
-      product.price = newPrice;
-      setProducts(updatedCategories);
+  // Fetch products from API
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch("http://localhost:9000/products");
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
     }
   };
 
-  // Handler for deleting a product
-  const deleteProduct = (categoryIndex, productIndex) => {
-    const updatedCategories = [...products];
-    updatedCategories[categoryIndex].products.splice(productIndex, 1);
-    setProducts(updatedCategories);
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("http://localhost:9000/api/logout", {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        sessionStorage.removeItem("userId");
+        sessionStorage.removeItem("isAdmin");
+        router.push("/");
+      } else {
+        console.error("Logout failed");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
+
+  // Add product handler
+  const handleAddProduct = async () => {
+    try {
+      const response = await fetch("http://localhost:9000/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newProduct),
+      });
+
+      if (response.ok) {
+        alert("Product added successfully");
+        setNewProduct({ name: "", category: "", price: "", stock: "", description: "" });
+        fetchProducts(); // Refresh product list
+      } else {
+        console.error("Failed to add product");
+      }
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
+  };
+
+  // Edit product handler
+  const editProduct = async (id, updatedProduct) => {
+    try {
+      const response = await fetch(`http://localhost:9000/products/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedProduct),
+      });
+
+      if (response.ok) {
+        alert("Product updated successfully");
+        fetchProducts(); // Refresh product list
+      } else {
+        console.error("Failed to update product");
+      }
+    } catch (error) {
+      console.error("Error updating product:", error);
+    }
+  };
+
+  // Delete product handler
+  const deleteProduct = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:9000/products/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        alert("Product deleted successfully");
+        fetchProducts(); // Refresh product list
+      } else {
+        console.error("Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+    }
   };
 
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-center text-green-400 mb-8">Product Management</h1>
+    <div className="flex h-screen text-black">
+      {/* Sidebar */}
+<div className="w-1/4 bg-gray-800 text-white p-6 shadow-lg min-h-screen">
+  <h2 className="text-2xl font-bold mb-6 text-center">Admin Dashboard</h2>
+  <ul className="space-y-4">
+    <li
+      className={`cursor-pointer flex items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
+        selectedOption === "addProducts" ? "bg-gray-600 text-white" : "hover:bg-gray-700 hover:text-white"
+      }`}
+      onClick={() => setSelectedOption("addProducts")}
+    >
+      Add Products
+    </li>
+    <li
+      className={`cursor-pointer flex items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
+        selectedOption === "deliveryPartner" ? "bg-gray-600 text-white" : "hover:bg-gray-700 hover:text-white"
+      }`}
+      onClick={() => setSelectedOption("deliveryPartner")}
+    >
+      Assign Delivery Partner
+    </li>
+    <li
+      className={`cursor-pointer flex items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
+        selectedOption === "analytics" ? "bg-gray-600 text-white" : "hover:bg-gray-700 hover:text-white"
+      }`}
+      onClick={() => setSelectedOption("analytics")}
+    >
+      Analytics
+    </li>
+    <li
+      className={`cursor-pointer flex items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
+        selectedOption === "cancelOrders" ? "bg-gray-600 text-white" : "hover:bg-gray-700 hover:text-white"
+      }`}
+      onClick={() => setSelectedOption("cancelOrders")}
+    >
+      Cancel Orders
+    </li>
+  </ul>
+  <button
+    onClick={handleLogout}
+    className="mt-10 w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-all duration-200"
+  >
+    Logout
+  </button>
+</div>
 
-      {products.map((category, categoryIndex) => (
-        <div key={category.name} className="mb-10">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">{category.name}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {category.products.map((product, productIndex) => (
-              <div
-                key={product.id}
-                className="bg-black text-white p-6 rounded-lg shadow-lg hover:scale-105 transition-transform"
-              >
-                <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                <p className="text-sm text-gray-400 mb-4">{product.price}</p>
-                <div className="flex justify-between items-center">
-                  <button
-                    onClick={() => editProduct(categoryIndex, productIndex)}
-                    className="bg-green-400 text-black py-1 px-3 rounded hover:bg-green-500 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteProduct(categoryIndex, productIndex)}
-                    className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => addProduct(categoryIndex)}
-            className="mt-4 bg-green-400 text-black py-2 px-4 rounded hover:bg-green-500 transition-colors"
-          >
-            Add Product
-          </button>
-        </div>
-      ))}
+
+      {/* Main Content */}
+      <div className="flex-1 p-8 bg-orange-100 overflow-auto">
+        {selectedOption === "addProducts" && (
+          <AddProducts/>
+
+        )}
+        
+        {selectedOption === "deliveryPartner" && (
+          <AssignDeliveryPartner/>
+        )}
+
+        {selectedOption === "analytics" && (
+          <Analytics/>
+        )}
+        {selectedOption === "cancelOrders" && (
+          <CancleOrder/>
+        )}
+      </div>
     </div>
   );
 };
